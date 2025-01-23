@@ -51,7 +51,7 @@ async function checkForAppUpdates() {
 
 <template>
   <main class="container">
-    <h1>Welcome to Tauri + Vue v0.1.1</h1>
+    <h1>Welcome to Tauri + Vue v0.1.2</h1>
 
     <div class="row">
       <a href="https://vitejs.dev" target="_blank">
