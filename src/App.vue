@@ -7,6 +7,7 @@ import { ask, message } from '@tauri-apps/plugin-dialog';
 
 const greetMsg = ref("");
 const name = ref("");
+const checkingForUpdates = ref(false);
 
 onMounted(() => {
   checkForAppUpdates();
@@ -18,60 +19,72 @@ async function greet() {
 }
 
 async function checkForAppUpdates(onUserCheck = false) {
-  console.log('Checking for updates...');
+  try {
+    checkingForUpdates.value = true;
+    console.log('Checking for updates...');
 
-  const update = await check();
-  if (update) {
-    console.log(
-      `found update ${update.version} from ${update.date} with notes ${update.body}`
-    );
+    const update = await check();
+    if (update) {
+      console.log(
+        `found update ${update.version} from ${update.date} with notes ${update.body}`
+      );
 
-    const isUserConfirmed = await ask(`Update to ${update.version} is available!\n\nRelease notes: ${update.body}`, {
-      title: 'Update Available',
-      kind: 'info',
-      okLabel: 'Update',
-      cancelLabel: 'Cancel'
-    });
-
-    if (isUserConfirmed) {
-      let downloaded = 0;
-      let contentLength = 0;
-      // alternatively we could also call update.download() and update.install() separately
-      await update.downloadAndInstall((event: any) => {
-        switch (event.event) {
-          case 'Started':
-            contentLength = event.data.contentLength || 0;
-            console.log(`started downloading ${event.data.contentLength} bytes`);
-            break;
-          case 'Progress':
-            downloaded += event.data.chunkLength;
-            console.log(`downloaded ${downloaded} from ${contentLength}`);
-            break;
-          case 'Finished':
-            console.log('download finished');
-            break;
-        }
+      const isUserConfirmed = await ask(`Update to ${update.version} is available!\n\nRelease notes: ${update.body}`, {
+        title: 'Update Available',
+        kind: 'info',
+        okLabel: 'Update',
+        cancelLabel: 'Cancel'
       });
 
-      console.log('update installed');
-      await relaunch();
-    }
-  } else {
-    console.log('No updates found');
-    if (onUserCheck) {
+      if (isUserConfirmed) {
+        let downloaded = 0;
+        let contentLength = 0;
+        // alternatively we could also call update.download() and update.install() separately
+        await update.downloadAndInstall((event: any) => {
+          switch (event.event) {
+            case 'Started':
+              contentLength = event.data.contentLength || 0;
+              console.log(`started downloading ${event.data.contentLength} bytes`);
+              break;
+            case 'Progress':
+              downloaded += event.data.chunkLength;
+              console.log(`downloaded ${downloaded} from ${contentLength}`);
+              break;
+            case 'Finished':
+              console.log('download finished');
+              break;
+          }
+        });
+
+        console.log('update installed');
+        await relaunch();
+      }
+    } else if (onUserCheck) {
+      console.log('No updates found');
       await message('There are currently no updates available.', {
-        title: 'Update Check',
+        title: 'No Updates',
         kind: 'info'
       });
     }
+  } catch (error) {
+    console.error('Error checking for updates:', error);
+    await message('An error occurred while checking for updates.', {
+      title: 'Error',
+      kind: 'error'
+    });
+  } finally {
+    checkingForUpdates.value = false;
   }
 }
 </script>
 
 <template>
   <main class="container">
-    <h1>Welcome to Tauri + Vue v0.1.3</h1>
-    <button @click="checkForAppUpdates(true)">Check for Updates</button>
+    <h1>Welcome to Tauri + Vue v0.1.4</h1>
+    <button :disabled="checkingForUpdates" :class="{
+      'bg-red': checkingForUpdates,
+      'bg-blue': !checkingForUpdates
+    }" @click="checkForAppUpdates(true)">Check for Updates</button>
     <div class="row">
       <a href="https://vitejs.dev" target="_blank">
         <img src="/vite.svg" class="logo vite" alt="Vite logo" />
@@ -183,6 +196,14 @@ button:hover {
 button:active {
   border-color: #396cd8;
   background-color: #e8e8e8;
+}
+
+.bg-red {
+  background-color: #ff4d4f;
+}
+
+.bg-blue {
+  background-color: #1890ff;
 }
 
 input,
